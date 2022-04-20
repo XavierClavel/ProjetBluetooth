@@ -1,7 +1,9 @@
 package com.example.projetbluetooth;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
@@ -19,6 +21,9 @@ import android.os.Looper;
 import android.os.Message;
 import android.provider.ContactsContract;
 import android.util.Log;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -36,11 +41,32 @@ public class ClientActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_client);
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
+        {
+            // Permission is not granted
+            Log.d("Communication", "no permission");
+            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.BLUETOOTH_CONNECT}, 1);
+        }
         Log.d("Connection", "start");
         ConnectBluetooth();
         //connect.execute();
 
         //new Thread(r).start();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case 1:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.d("Connection", "permission granted");
+                }
+                else {
+                    Toast.makeText(this, "Merci d'autoriser la connexion aux appareils bluetooth", Toast.LENGTH_SHORT).show();
+                }
+                break;
+        }
     }
 
     void ConnectBluetooth() {
@@ -192,6 +218,33 @@ public class ClientActivity extends AppCompatActivity {
 
             // Do things like hide the progress bar or change a TextView
         }
+    }
+
+    LinearLayout linLayout;
+    RelativeLayout.LayoutParams paramsTopLeft;
+    RelativeLayout.LayoutParams paramsTopRight;
+
+    public void InitializeDisplayMonitoring()
+    {
+        linLayout = findViewById(R.id.linLayout);
+
+        paramsTopLeft =
+                new RelativeLayout.LayoutParams(
+                        RelativeLayout.LayoutParams.WRAP_CONTENT,
+                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
+                RelativeLayout.TRUE);
+        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_TOP,
+                RelativeLayout.TRUE);
+
+        paramsTopRight=
+                new RelativeLayout.LayoutParams(
+                        RelativeLayout.LayoutParams.WRAP_CONTENT,
+                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,
+                RelativeLayout.TRUE);
+        paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP,
+                RelativeLayout.TRUE);
     }
 
 

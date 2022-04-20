@@ -10,26 +10,38 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
+import java.io.InputStream;
+import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 
+
+
 public class ServerActivity extends AppCompatActivity {
     BluetoothServerSocket server_socket;
-    BluetoothDevice device = null;
+    BluetoothSocket socket;
     BluetoothAdapter bluetoothAdapter;
     Context context = this;
+    List<ProcessData> listProcess;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_client);
+        setContentView(R.layout.activity_server);
         Log.d("Connection", "start");
         ConnectBluetooth();
     }
@@ -69,7 +81,7 @@ public class ServerActivity extends AppCompatActivity {
             public void run() {
                 try {
                     while (true) {
-                        Log.d("client thread", "thread running");
+                        Log.d("Communication", "server thread running");
                     }
                 } catch (Exception e) {
                     Log.d("thread", "thread failed");
@@ -94,27 +106,6 @@ public class ServerActivity extends AppCompatActivity {
           Message message = mHandler.obtainMessage(MSG_CALCUL, (Object) messageString);
           mHandler.sendMessage(message);
       }
-    };
-
-    /*public AsyncTask connect = new AsyncTask() {
-        @Override
-        protected Object doInBackground(Object[] objects) {
-            while (true) {
-                try {
-                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        client_socket.connect();
-                        if (client_socket.isConnected()) {
-                            Log.d("Connection", "client connected");
-                            break;
-                        }
-                    }
-                    Thread.sleep(1000);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            return null;
-        }
     };*/
 
     class connect extends AsyncTask<String, Integer, String> {
@@ -133,7 +124,9 @@ public class ServerActivity extends AppCompatActivity {
                 Log.d("Connection", "server trying");
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 }
-                server_socket.accept();
+                socket = server_socket.accept();
+                DisplayMonitoring();
+                Dialogue();
                 Log.d("Connection", "server succeeded");
                 //}
             } catch (Exception e) {
@@ -159,5 +152,103 @@ public class ServerActivity extends AppCompatActivity {
 
             // Do things like hide the progress bar or change a TextView
         }
+    }
+
+    LinearLayout linLayout;
+    RelativeLayout.LayoutParams paramsTopLeft;
+    RelativeLayout.LayoutParams paramsTopRight;
+
+    void DisplayMonitoring()
+    {
+        linLayout = findViewById(R.id.linLayout);
+
+        paramsTopLeft =
+                new RelativeLayout.LayoutParams(
+                        RelativeLayout.LayoutParams.WRAP_CONTENT,
+                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
+                RelativeLayout.TRUE);
+        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_TOP,
+                RelativeLayout.TRUE);
+
+        paramsTopRight=
+                new RelativeLayout.LayoutParams(
+                        RelativeLayout.LayoutParams.WRAP_CONTENT,
+                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,
+                RelativeLayout.TRUE);
+        paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP,
+                RelativeLayout.TRUE);
+
+        //listProcess = new List<ProcessData>();
+        final Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        final List pkgAppsList = getPackageManager()
+                .queryIntentActivities(mainIntent, 0);
+
+        //Nom des applications installées
+        for(Object object :pkgAppsList) {
+            ResolveInfo info = (ResolveInfo) object;
+            String strPackageName = info.activityInfo.applicationInfo.packageName.toString();
+            int UID = info.activityInfo.applicationInfo.uid;
+            //String monitoring = info.activityInfo.applicationInfo.
+            String RSS = getRSS(strPackageName);
+            createViewProcess(UID, strPackageName, "RSS " + RSS);
+            listProcess.add(new ProcessData(strPackageName, Integer.toString(UID), RSS));
+        }
+    }
+
+    String getRSS(String wantedPackageName)
+    {
+        int RSS = 0;
+        String RSSstring ="";
+        Process process = null;
+        try {
+            process = new ProcessBuilder("ps").start();
+        } catch (Exception e) {
+            return "echec";
+        }
+        InputStream in = process.getInputStream();
+        Scanner scanner = new Scanner(in);
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            if (line.startsWith("u0_")) {
+                String[] temp = line.split("\\s+");
+                String packageName = temp[temp.length - 1];
+//PID
+                if (packageName.equals(wantedPackageName)) {
+                    int pid = new Integer(temp[1]).intValue();
+                    Log.d("PID?", String.valueOf(pid));
+//memoire qu’occupe le processus
+                    RSS = new Integer(temp[4]).intValue();
+                    Log.d("RSS?", String.valueOf(RSS));
+                    RSSstring = ": " + String.valueOf(RSS);
+                    return RSSstring;
+                }
+                else RSSstring = "unknown";
+            }
+        }
+        return RSSstring;
+    }
+
+    void createViewProcess(int uid, String name, String monitoring)
+    {
+
+        RelativeLayout layout = new RelativeLayout(this);
+        TextView nameTextView = new TextView(this);
+        nameTextView.setText("[" + uid + "] " + name + "\n" + monitoring + "\n");
+        layout.addView(nameTextView);
+
+        Button button = new Button(this);
+        button.setText("Monitor");
+        layout.addView (button, paramsTopRight);
+
+        linLayout.addView(layout);
+        return;
+    }
+
+    void WriteData()
+    {
+
     }
 }

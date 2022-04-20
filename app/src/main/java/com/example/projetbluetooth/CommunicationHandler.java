@@ -11,12 +11,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class Communicate extends Thread{
+public class CommunicationHandler extends Thread{
     public BluetoothSocket socket;
     InputStream in;
     OutputStream out;
     DataInputStream dataIn;
     DataOutputStream dataOut;
+
+    // Singleton pattern
+    static CommunicationHandler instance = new CommunicationHandler();
+
+    public static CommunicationHandler getInstance() {
+        return instance;
+    }
 
     @Override
     public void run() {
@@ -30,8 +37,15 @@ public class Communicate extends Thread{
             dataIn = new DataInputStream(in);
             dataOut = new DataOutputStream(out);
 
+            while (true) {
+
+                bytes = dataIn.read(buffer);
+                String message = new String(buffer, 0, bytes);
+                Log.d("Communication", "message read : " + message);
+            }
+
         } catch (Exception e) {
-            Log.d("thread", "thread failed");
+            Log.d("Communication", "thread failed");
         }
     }
 
@@ -49,7 +63,8 @@ public class Communicate extends Thread{
         int bytes = 3;
         try {
             dataOut.write(bytes);
-            String readMessage = new String(buffer, 0, bytes);
+            dataOut.flush();
+            //String readMessage = new String(buffer, 0, bytes);
         } catch (Exception e) {
             Log.d("thread", "failed to read");
         }
@@ -63,10 +78,13 @@ public class Communicate extends Thread{
         String string = buffer.toString();
         String[] data = string.split("|");  //Split string on the | character
         String packageName = data[0];
-        int uid = Integer.valueOf(data[1]);
-        int rss = Integer.valueOf(data[2]);
+        String uid = data[1];
+        String rss = data[2];
 
         //call function in server/client with arguments String, int, int that creates a new
+        //need to check if value already exists later
+        //pas de monitor pour le client
+        //couleur pour indiquer activité monitorée
     }
 
     //Encodage des données : String sous la forme :
