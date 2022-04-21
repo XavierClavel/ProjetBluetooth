@@ -5,7 +5,6 @@ import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
@@ -24,9 +23,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.UUID;
 
 
@@ -36,7 +35,8 @@ public class ServerActivity extends AppCompatActivity {
     BluetoothSocket socket;
     BluetoothAdapter bluetoothAdapter;
     Context context = this;
-    List<ProcessData> listProcess;
+    List<ProcessData> listProcess = new ArrayList<>();
+    CommunicationHandler communicationHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,8 +125,15 @@ public class ServerActivity extends AppCompatActivity {
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 }
                 socket = server_socket.accept();
+                server_socket.close();
                 DisplayMonitoring();
-                Dialogue();
+                communicationHandler = CommunicationHandler.getInstance();
+                communicationHandler.ServerCommunication(ServerActivity.this, socket);
+                communicationHandler.start();
+                for (ProcessData processData : listProcess) {
+                    communicationHandler.sendData("data" + processData.FormatData());
+                }
+                //Dialogue();
                 Log.d("Connection", "server succeeded");
                 //}
             } catch (Exception e) {
@@ -187,7 +194,9 @@ public class ServerActivity extends AppCompatActivity {
                 .queryIntentActivities(mainIntent, 0);
 
         //Nom des applications installées
+        Log.d("Connection", pkgAppsList.toString());
         for(Object object :pkgAppsList) {
+            Log.d("Connection", "added item");
             ResolveInfo info = (ResolveInfo) object;
             String strPackageName = info.activityInfo.applicationInfo.packageName.toString();
             int UID = info.activityInfo.applicationInfo.uid;
@@ -245,6 +254,10 @@ public class ServerActivity extends AppCompatActivity {
 
         linLayout.addView(layout);
         return;
+    }
+
+    public void requestMonitoring(String processName) {
+
     }
 
     void WriteData()

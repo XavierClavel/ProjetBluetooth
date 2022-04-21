@@ -10,13 +10,16 @@ import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public class CommunicationHandler extends Thread{
-    public BluetoothSocket socket;
+    BluetoothSocket socket;
     InputStream in;
     OutputStream out;
     DataInputStream dataIn;
     DataOutputStream dataOut;
+    ClientActivity clientActivity;
+    ServerActivity serverActivity;
 
     // Singleton pattern
     static CommunicationHandler instance = new CommunicationHandler();
@@ -25,10 +28,20 @@ public class CommunicationHandler extends Thread{
         return instance;
     }
 
+    public void ClientCommunication(ClientActivity clientActivity, BluetoothSocket socket) {
+        this.clientActivity = clientActivity;
+        this.socket = socket;
+    }
+
+    public void ServerCommunication(ServerActivity serverActivity, BluetoothSocket socket) {
+        this.serverActivity = serverActivity;
+        this.socket = socket;
+    }
+
     @Override
     public void run() {
         byte[] buffer = new byte[256];
-        int bytes;
+        Log.d("Communication", "thread is running");
 
         try {
             in = socket.getInputStream();
@@ -37,11 +50,10 @@ public class CommunicationHandler extends Thread{
             dataIn = new DataInputStream(in);
             dataOut = new DataOutputStream(out);
 
-            while (true) {
+            Log.d("Communication", "initialization ok");
 
-                bytes = dataIn.read(buffer);
-                String message = new String(buffer, 0, bytes);
-                Log.d("Communication", "message read : " + message);
+            while (true) {
+                read(buffer);
             }
 
         } catch (Exception e) {
@@ -53,20 +65,51 @@ public class CommunicationHandler extends Thread{
         int bytes;
         try {
             bytes = dataIn.read(buffer);
-            String readMessage = new String(buffer, 0, bytes);
+            String messageReceived = new String(buffer, 0, bytes);
+            String[] messages = messageReceived.split("\\|\\|");
+            for (String message : messages) {
+                Log.d("Communication", "message read : " + message);
+                ProcessMessage(message);
+            }
         } catch (Exception e) {
-            Log.d("thread", "failed to read");
+            Log.d("Communication", "failed to read");
         }
     }
 
+    public void ProcessMessage(String message) {
+        String[] messageData = message.split("\\|");
+        Log.d("Communication", messageData[0] + "   " + messageData.length);
+        switch (messageData[0]) {
+            case "data":
+                // format : data|processName|uid|RSS
+                Log.d("Communication", "data received");
+                clientActivity.createViewProcess(messageData[1], messageData[2], messageData[3]);
+                break;
+
+            case "query":
+                //format : query|processName
+                serverActivity.requestMonitoring(messageData[1]);
+                break;
+
+            case "update":
+                //format : update|processName|RSS
+                clientActivity.updateViewProcess(messageData[1], messageData[2], messageData[3]);
+                break;
+
+        }
+    }
+
+    public void sendData(String message) {
+        write(message.getBytes());
+    }
+
     public void write(byte[] buffer) {
-        int bytes = 3;
         try {
-            dataOut.write(bytes);
+            dataOut.write(buffer);
             dataOut.flush();
             //String readMessage = new String(buffer, 0, bytes);
         } catch (Exception e) {
-            Log.d("thread", "failed to read");
+            Log.d("thread", "failed to write");
         }
     }
 

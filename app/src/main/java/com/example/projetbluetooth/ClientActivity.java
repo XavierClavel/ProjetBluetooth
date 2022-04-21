@@ -1,34 +1,27 @@
 package com.example.projetbluetooth;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.provider.ContactsContract;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
+import android.widget.TextView;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,25 +29,19 @@ public class ClientActivity extends AppCompatActivity {
     BluetoothSocket client_socket;
     BluetoothDevice device = null;
     Context context = this;
+    CommunicationHandler communicationHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_client);
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)
-        {
-            // Permission is not granted
-            Log.d("Communication", "no permission");
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.BLUETOOTH_CONNECT}, 1);
-        }
         Log.d("Connection", "start");
+        InitializeDisplayMonitoring();
         ConnectBluetooth();
-        //connect.execute();
 
-        //new Thread(r).start();
     }
 
-    @Override
+    /*@Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
@@ -67,7 +54,7 @@ public class ClientActivity extends AppCompatActivity {
                 }
                 break;
         }
-    }
+    }*/
 
     void ConnectBluetooth() {
 
@@ -192,7 +179,10 @@ public class ClientActivity extends AppCompatActivity {
             try {
                 Log.d("Connection", "client trying");
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {}
-                    client_socket.connect();
+                client_socket.connect();
+                communicationHandler = CommunicationHandler.getInstance();
+                communicationHandler.ClientCommunication(ClientActivity.this, client_socket);
+                communicationHandler.start();
                     Log.d("Connection", "client succeeded");
                 //}
             } catch (Exception e) {
@@ -245,6 +235,40 @@ public class ClientActivity extends AppCompatActivity {
                 RelativeLayout.TRUE);
         paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP,
                 RelativeLayout.TRUE);
+    }
+
+    Map<String,TextView> dictionaryProcessNameToTextView = new HashMap<String, TextView>();
+
+    public void createViewProcess(String name, String uid, String RSS)
+    {
+        Log.d("Communication", "view process created");
+
+        RelativeLayout layout = new RelativeLayout(this);
+        TextView nameTextView = new TextView(this);
+        nameTextView.setText("[" + uid + "] " + name + "\n" + RSS + "\n");
+        layout.addView(nameTextView);
+
+        Log.d("Communication", "ok 1");
+        Button button = new Button(this);
+        button.setText("Monitor");
+        layout.addView (button, paramsTopRight);
+
+        Log.d("Communication", "ok 2");
+
+        linLayout.addView(layout);
+        Log.d("Communication", "ok 3");
+        //dictionaryProcessNameToTextView.put(name, nameTextView);
+        return;
+    }
+
+    public void updateViewProcess(String processName, String uid,String RSS) {
+        try {
+            TextView nameTextView = dictionaryProcessNameToTextView.get(processName);
+            nameTextView.setText("[" + uid + "] " + processName + "\n" + RSS + "\n");
+        } catch (Exception e) {
+            Log.d("Connection", " Failed to update view process");
+        }
+
     }
 
 
