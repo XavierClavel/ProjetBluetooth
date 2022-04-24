@@ -125,11 +125,13 @@ public class ServerActivity extends AppCompatActivity {
                 if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 }
                 socket = server_socket.accept();
+                Log.d("Communication", "Connection established");
                 server_socket.close();
                 DisplayMonitoring();
                 communicationHandler = CommunicationHandler.getInstance();
                 communicationHandler.ServerCommunication(ServerActivity.this, socket);
                 communicationHandler.start();
+                Thread.sleep(1000);
                 for (ProcessData processData : listProcess) {
                     communicationHandler.sendData("data" + processData.FormatData());
                 }

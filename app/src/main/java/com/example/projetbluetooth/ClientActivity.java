@@ -31,6 +31,10 @@ public class ClientActivity extends AppCompatActivity {
     Context context = this;
     CommunicationHandler communicationHandler;
 
+    LinearLayout linLayout;
+    RelativeLayout.LayoutParams paramsTopLeft;
+    RelativeLayout.LayoutParams paramsTopRight;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -210,56 +214,38 @@ public class ClientActivity extends AppCompatActivity {
         }
     }
 
-    LinearLayout linLayout;
-    RelativeLayout.LayoutParams paramsTopLeft;
-    RelativeLayout.LayoutParams paramsTopRight;
-
     public void InitializeDisplayMonitoring()
     {
-        linLayout = findViewById(R.id.linLayout);
+        runOnUiThread(new Runnable() {
+            public void run() {
+                linLayout =
 
-        paramsTopLeft =
-                new RelativeLayout.LayoutParams(
-                        RelativeLayout.LayoutParams.WRAP_CONTENT,
-                        RelativeLayout.LayoutParams.WRAP_CONTENT);
-        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
-                RelativeLayout.TRUE);
-        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_TOP,
-                RelativeLayout.TRUE);
+                        findViewById(R.id.linLayout);
 
-        paramsTopRight=
-                new RelativeLayout.LayoutParams(
-                        RelativeLayout.LayoutParams.WRAP_CONTENT,
-                        RelativeLayout.LayoutParams.WRAP_CONTENT);
-        paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,
-                RelativeLayout.TRUE);
-        paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP,
-                RelativeLayout.TRUE);
+                paramsTopLeft =
+                        new RelativeLayout.LayoutParams(
+                                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                                RelativeLayout.LayoutParams.WRAP_CONTENT);
+                paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
+                        RelativeLayout.TRUE);
+                paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_TOP,
+                        RelativeLayout.TRUE);
+
+                paramsTopRight =
+                        new RelativeLayout.LayoutParams(
+                                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                                RelativeLayout.LayoutParams.WRAP_CONTENT);
+                paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,
+                        RelativeLayout.TRUE);
+                paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP,
+                        RelativeLayout.TRUE);
+
+                Log.d("Communication", "view initialized");
+            }
+        });
     }
 
     Map<String,TextView> dictionaryProcessNameToTextView = new HashMap<String, TextView>();
-
-    public void createViewProcess(String name, String uid, String RSS)
-    {
-        Log.d("Communication", "view process created");
-
-        RelativeLayout layout = new RelativeLayout(this);
-        TextView nameTextView = new TextView(this);
-        nameTextView.setText("[" + uid + "] " + name + "\n" + RSS + "\n");
-        layout.addView(nameTextView);
-
-        Log.d("Communication", "ok 1");
-        Button button = new Button(this);
-        button.setText("Monitor");
-        layout.addView (button, paramsTopRight);
-
-        Log.d("Communication", "ok 2");
-
-        linLayout.addView(layout);
-        Log.d("Communication", "ok 3");
-        //dictionaryProcessNameToTextView.put(name, nameTextView);
-        return;
-    }
 
     public void updateViewProcess(String processName, String uid,String RSS) {
         try {
@@ -269,6 +255,33 @@ public class ClientActivity extends AppCompatActivity {
             Log.d("Connection", " Failed to update view process");
         }
 
+    }
+
+    public void createViewProcess(String name, String uid, String RSS) {
+        runOnUiThread(new Runnable() {
+            public void run(){
+                Log.d("Communication", "view process created");
+
+                RelativeLayout layout = new RelativeLayout(ClientActivity.this);
+                TextView nameTextView = new TextView(ClientActivity.this);
+                Log.d("Communication",name + uid + RSS);
+                nameTextView.setText("[" + uid + "] " + name + "\n" + RSS + "\n");
+                layout.addView(nameTextView);
+
+                Button button = new Button(ClientActivity.this);
+                button.setText("Monitor");
+                layout.addView (button, paramsTopRight);
+
+
+                try {
+                    linLayout.addView(layout);
+                    Log.d("Communication", "success");
+                    //dictionaryProcessNameToTextView.put(name, nameTextView);
+                } catch (Exception e) {
+                    Log.d("Communication", "failed to add view because i suck :D");
+                }
+            }
+        });
     }
 
 

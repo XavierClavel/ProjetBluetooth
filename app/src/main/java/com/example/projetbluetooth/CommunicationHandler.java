@@ -20,6 +20,7 @@ public class CommunicationHandler extends Thread{
     DataOutputStream dataOut;
     ClientActivity clientActivity;
     ServerActivity serverActivity;
+    Boolean connectionInitialized = true;
 
     // Singleton pattern
     static CommunicationHandler instance = new CommunicationHandler();
@@ -31,6 +32,8 @@ public class CommunicationHandler extends Thread{
     public void ClientCommunication(ClientActivity clientActivity, BluetoothSocket socket) {
         this.clientActivity = clientActivity;
         this.socket = socket;
+        //connectionInitialized = false;
+        //clientActivity.InitializeDisplayMonitoring();
     }
 
     public void ServerCommunication(ServerActivity serverActivity, BluetoothSocket socket) {
@@ -66,6 +69,7 @@ public class CommunicationHandler extends Thread{
         try {
             bytes = dataIn.read(buffer);
             String messageReceived = new String(buffer, 0, bytes);
+            Log.d("Communication", messageReceived);
             String[] messages = messageReceived.split("\\|\\|");
             for (String message : messages) {
                 Log.d("Communication", "message read : " + message);
@@ -77,6 +81,10 @@ public class CommunicationHandler extends Thread{
     }
 
     public void ProcessMessage(String message) {
+        /*if (!connectionInitialized && clientActivity != null) {
+            connectionInitialized = true;
+            clientActivity.InitializeDisplayMonitoring();
+        }*/
         String[] messageData = message.split("\\|");
         Log.d("Communication", messageData[0] + "   " + messageData.length);
         switch (messageData[0]) {
