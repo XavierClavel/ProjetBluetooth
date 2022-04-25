@@ -20,7 +20,6 @@ public class CommunicationHandler extends Thread{
     DataOutputStream dataOut;
     ClientActivity clientActivity;
     ServerActivity serverActivity;
-    Boolean connectionInitialized = true;
 
     // Singleton pattern
     static CommunicationHandler instance = new CommunicationHandler();
@@ -86,7 +85,7 @@ public class CommunicationHandler extends Thread{
             clientActivity.InitializeDisplayMonitoring();
         }*/
         String[] messageData = message.split("\\|");
-        Log.d("Communication", messageData[0] + "   " + messageData.length);
+        Log.d("Communication", messageData[0] + " message of length " + messageData.length);
         switch (messageData[0]) {
             case "data":
                 // format : data|processName|uid|RSS
@@ -101,6 +100,7 @@ public class CommunicationHandler extends Thread{
 
             case "update":
                 //format : update|processName|RSS
+                Log.d("Update", "update query received");
                 clientActivity.updateViewProcess(messageData[1], messageData[2], messageData[3]);
                 break;
 
@@ -115,7 +115,6 @@ public class CommunicationHandler extends Thread{
         try {
             dataOut.write(buffer);
             dataOut.flush();
-            //String readMessage = new String(buffer, 0, bytes);
         } catch (Exception e) {
             Log.d("thread", "failed to write");
         }

@@ -259,7 +259,9 @@ public class ServerActivity extends AppCompatActivity {
     }
 
     public void requestMonitoring(String processName) {
-
+        String RSS = getRSS(processName);
+        String message = ProcessData.StringFormatDataForUpdate(processName, RSS);
+        communicationHandler.sendData(message);
     }
 
     void WriteData()

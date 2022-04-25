@@ -15,6 +15,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -25,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class ClientActivity extends AppCompatActivity {
+public class ClientActivity extends AppCompatActivity implements  View.OnClickListener {
     BluetoothSocket client_socket;
     BluetoothDevice device = null;
     Context context = this;
@@ -34,6 +35,8 @@ public class ClientActivity extends AppCompatActivity {
     LinearLayout linLayout;
     RelativeLayout.LayoutParams paramsTopLeft;
     RelativeLayout.LayoutParams paramsTopRight;
+
+    int period = 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -246,14 +249,19 @@ public class ClientActivity extends AppCompatActivity {
     }
 
     Map<String,TextView> dictionaryProcessNameToTextView = new HashMap<String, TextView>();
+    Map<Integer, String> dictionnaryButtonToProcessName = new HashMap<Integer, String>();
 
     public void updateViewProcess(String processName, String uid,String RSS) {
-        try {
-            TextView nameTextView = dictionaryProcessNameToTextView.get(processName);
-            nameTextView.setText("[" + uid + "] " + processName + "\n" + RSS + "\n");
-        } catch (Exception e) {
-            Log.d("Connection", " Failed to update view process");
-        }
+        runOnUiThread(new Runnable() {
+            public void run(){
+                try {
+                    TextView nameTextView = dictionaryProcessNameToTextView.get(processName);
+                    nameTextView.setText("[" + uid + "] " + processName + "\n" + "RSS " + RSS + "\n");
+                } catch (Exception e) {
+                    Log.d("Connection", " Failed to update view process");
+                }
+            }
+        });
 
     }
 
@@ -265,25 +273,37 @@ public class ClientActivity extends AppCompatActivity {
                 RelativeLayout layout = new RelativeLayout(ClientActivity.this);
                 TextView nameTextView = new TextView(ClientActivity.this);
                 Log.d("Communication",name + uid + RSS);
-                nameTextView.setText("[" + uid + "] " + name + "\n" + RSS + "\n");
+                nameTextView.setText("[" + uid + "] " + name + "\n" + "RSS " + RSS + "\n");
                 layout.addView(nameTextView);
 
-                Button button = new Button(ClientActivity.this);
-                button.setText("Monitor");
-                layout.addView (button, paramsTopRight);
+                Log.d("RSS", "\"" + RSS + "\"");
+
+                if (!RSS.equals("unknown")) {
+                    Button button = new Button(ClientActivity.this);
+                    button.setText("Monitor");
+                    layout.addView(button, paramsTopRight);
+                    dictionnaryButtonToProcessName.put(button.getId(), name);
+                    button.setOnClickListener(ClientActivity.this);
+                }
+                else Log.d("Communication", "no button");
 
 
                 try {
                     linLayout.addView(layout);
                     Log.d("Communication", "success");
-                    //dictionaryProcessNameToTextView.put(name, nameTextView);
+                    dictionaryProcessNameToTextView.put(name, nameTextView);
                 } catch (Exception e) {
-                    Log.d("Communication", "failed to add view because i suck :D");
+                    Log.d("Communication", "failed to add view");
                 }
             }
         });
     }
 
+    @Override
+    public void onClick(View view) {
+        Integer buttonId = view.getId();
+        communicationHandler.sendData("query|" + dictionnaryButtonToProcessName.get(buttonId));
+    }
 
     final Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {

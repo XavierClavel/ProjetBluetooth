@@ -5,8 +5,8 @@ public class ProcessData {
     String uid;
     String RSS;
 
-    String separator = "|";
-    String endSeparator = "||";
+    static String separator = "|";
+    static String endSeparator = "||";
 
     public ProcessData(String processName, String uid, String RSS) {    //constructor
         this.processName = processName;
@@ -18,5 +18,10 @@ public class ProcessData {
     {
         return separator + processName + separator + uid + separator + RSS + endSeparator;
         //returns data in format |processName|uid|RSS
+    }
+
+    public static String StringFormatDataForUpdate(String processName, String RSS)
+    {
+        return "update" + separator + processName + separator + "uid" + separator + RSS + endSeparator;
     }
 }
