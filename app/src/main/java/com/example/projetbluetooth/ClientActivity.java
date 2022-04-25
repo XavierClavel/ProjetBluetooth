@@ -132,45 +132,6 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
             }
         });
     }
-/*
-    //Thread utilisé pour l'envoi et la réception des messages
-    final int MSG_CALCUL = 1;
-    Runnable r = new Runnable() {
-      public void run() {
-          while (true) {
-              try {
-                  Thread.sleep(1000);
-                  break;
-              } catch (Exception e) {
-                  e.printStackTrace();
-              }
-          }
-          String messageString = "Client Connected";
-          Message message = mHandler.obtainMessage(MSG_CALCUL, (Object) messageString);
-          mHandler.sendMessage(message);
-      }
-    };
-
-    /*public AsyncTask connect = new AsyncTask() {
-        @Override
-        protected Object doInBackground(Object[] objects) {
-            while (true) {
-                try {
-                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        client_socket.connect();
-                        if (client_socket.isConnected()) {
-                            Log.d("Connection", "client connected");
-                            break;
-                        }
-                    }
-                    Thread.sleep(1000);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            return null;
-        }
-    };*/
 
     class connect extends AsyncTask<String, Integer, String> {
         // Runs in UI before background thread is called

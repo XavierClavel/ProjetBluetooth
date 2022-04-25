@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -41,6 +42,7 @@ public class ServerActivity extends AppCompatActivity {
     CommunicationHandler communicationHandler;
 
     Map<String, String> dictionaryProcessNameToUID = new HashMap<String, String>();
+    Map<String, Button> dictionaryProcessNameToButton = new HashMap<String, Button>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,40 +79,6 @@ public class ServerActivity extends AppCompatActivity {
             Log.d("Connection", "Creation of RF comm socket failed");
         }
     }
-
-    void Dialogue() {
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    while (true) {
-                        Log.d("Communication", "server thread running");
-                    }
-                } catch (Exception e) {
-                    Log.d("thread", "thread failed");
-                }
-            }
-        });
-    }
-/*
-    //Thread utilisé pour l'envoi et la réception des messages
-    final int MSG_CALCUL = 1;
-    Runnable r = new Runnable() {
-      public void run() {
-          while (true) {
-              try {
-                  Thread.sleep(1000);
-                  break;
-              } catch (Exception e) {
-                  e.printStackTrace();
-              }
-          }
-          String messageString = "Client Connected";
-          Message message = mHandler.obtainMessage(MSG_CALCUL, (Object) messageString);
-          mHandler.sendMessage(message);
-      }
-    };*/
 
     class connect extends AsyncTask<String, Integer, String> {
         // Runs in UI before background thread is called
@@ -254,18 +222,24 @@ public class ServerActivity extends AppCompatActivity {
         nameTextView.setText("[" + uid + "] " + name + "\n" + monitoring + "\n");
         layout.addView(nameTextView);
 
-        Button button = new Button(this);
-        button.setText("Monitor");
-        layout.addView (button, paramsTopRight);
+        if (!monitoring.equals("RSS unknown")) {
+            Button button = new Button(this);
+            button.setText("Monitor");
+            layout.addView (button, paramsTopRight);
+            dictionaryProcessNameToButton.put(name, button);
+        }
 
         linLayout.addView(layout);
         return;
     }
 
     public void requestMonitoring(String processName) {
+        Button button = dictionaryProcessNameToButton.get(processName);
+        button.setBackgroundColor(Color.WHITE);
+        button.setTextColor(Color.MAGENTA);
         String RSS = getRSS(processName);
         String message = ProcessData.StringFormatDataForUpdate(processName, dictionaryProcessNameToUID.get(processName),RSS);
         communicationHandler.sendData(message);
     }
-    
+
 }

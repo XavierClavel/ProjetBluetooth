@@ -76,6 +76,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
 
+        findViewById(R.id.serverButton).setVisibility(View.GONE);
+        findViewById(R.id.clientButton).setVisibility(View.GONE);
+        findViewById(R.id.connecting).setVisibility(View.VISIBLE);
+
         switch (view.getId()) {
 
             // Si l'utilisateur appuye sur le bouton "Client", on lance l'activité ClientActivity
