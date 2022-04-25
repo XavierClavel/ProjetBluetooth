@@ -20,8 +20,8 @@ public class ProcessData {
         //returns data in format |processName|uid|RSS
     }
 
-    public static String StringFormatDataForUpdate(String processName, String RSS)
+    public static String StringFormatDataForUpdate(String processName, String uid, String RSS)
     {
-        return "update" + separator + processName + separator + "uid" + separator + RSS + endSeparator;
+        return "update" + separator + processName + separator + uid + separator + RSS + endSeparator;
     }
 }

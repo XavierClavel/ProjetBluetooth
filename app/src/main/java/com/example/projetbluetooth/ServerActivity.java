@@ -24,7 +24,9 @@ import android.widget.TextView;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.UUID;
 
@@ -37,6 +39,8 @@ public class ServerActivity extends AppCompatActivity {
     Context context = this;
     List<ProcessData> listProcess = new ArrayList<>();
     CommunicationHandler communicationHandler;
+
+    Map<String, String> dictionaryProcessNameToUID = new HashMap<String, String>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -192,8 +196,7 @@ public class ServerActivity extends AppCompatActivity {
         //listProcess = new List<ProcessData>();
         final Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-        final List pkgAppsList = getPackageManager()
-                .queryIntentActivities(mainIntent, 0);
+        final List pkgAppsList = getPackageManager().queryIntentActivities(mainIntent, 0);
 
         //Nom des applications installées
         Log.d("Connection", pkgAppsList.toString());
@@ -201,11 +204,12 @@ public class ServerActivity extends AppCompatActivity {
             Log.d("Connection", "added item");
             ResolveInfo info = (ResolveInfo) object;
             String strPackageName = info.activityInfo.applicationInfo.packageName.toString();
-            int UID = info.activityInfo.applicationInfo.uid;
-            //String monitoring = info.activityInfo.applicationInfo.
+            String UID = Integer.toString(info.activityInfo.applicationInfo.uid);
             String RSS = getRSS(strPackageName);
+
             createViewProcess(UID, strPackageName, "RSS " + RSS);
-            listProcess.add(new ProcessData(strPackageName, Integer.toString(UID), RSS));
+            listProcess.add(new ProcessData(strPackageName, UID, RSS));
+            dictionaryProcessNameToUID.put(strPackageName, UID);
         }
     }
 
@@ -242,7 +246,7 @@ public class ServerActivity extends AppCompatActivity {
         return RSSstring;
     }
 
-    void createViewProcess(int uid, String name, String monitoring)
+    void createViewProcess(String uid, String name, String monitoring)
     {
 
         RelativeLayout layout = new RelativeLayout(this);
@@ -260,12 +264,8 @@ public class ServerActivity extends AppCompatActivity {
 
     public void requestMonitoring(String processName) {
         String RSS = getRSS(processName);
-        String message = ProcessData.StringFormatDataForUpdate(processName, RSS);
+        String message = ProcessData.StringFormatDataForUpdate(processName, dictionaryProcessNameToUID.get(processName),RSS);
         communicationHandler.sendData(message);
     }
-
-    void WriteData()
-    {
-
-    }
+    
 }

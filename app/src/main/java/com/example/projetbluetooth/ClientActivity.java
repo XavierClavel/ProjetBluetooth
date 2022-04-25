@@ -37,6 +37,9 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
     RelativeLayout.LayoutParams paramsTopRight;
 
     int period = 1000;
+    String processName;
+
+    MonitorRSS monitorRSS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,12 +89,12 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
         for (BluetoothDevice deviceIterator : bondedDevices) {
             Log.d("Connection", deviceIterator.getName());
             switch (deviceIterator.getName()) {
-                case "OPPO Reno Z" :
+                case "OPPO Reno Z":
                     device = deviceIterator;
                     Log.d("Connection", "Device was found !");
                     break;
 
-                case "ProjetBluetooth" :
+                case "ProjetBluetooth":
                     device = deviceIterator;
                     Log.d("Connection", "Device was found !");
                     break;
@@ -114,14 +117,13 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
         }
     }
 
-    void Dialogue()
-    {
+    void Dialogue() {
         Handler handler = new Handler(Looper.getMainLooper());
-            handler.post(new Runnable() {
+        handler.post(new Runnable() {
             @Override
             public void run() {
                 try {
-                    while(true) {
+                    while (true) {
                         Log.d("client thread", "thread running");
                     }
                 } catch (Exception e) {
@@ -170,8 +172,7 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
         }
     };*/
 
-    class connect extends AsyncTask<String, Integer, String>
-    {
+    class connect extends AsyncTask<String, Integer, String> {
         // Runs in UI before background thread is called
         @Override
         protected void onPreExecute() {
@@ -185,12 +186,13 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
         protected String doInBackground(String... params) {
             try {
                 Log.d("Connection", "client trying");
-                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {}
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                }
                 client_socket.connect();
                 communicationHandler = CommunicationHandler.getInstance();
                 communicationHandler.ClientCommunication(ClientActivity.this, client_socket);
                 communicationHandler.start();
-                    Log.d("Connection", "client succeeded");
+                Log.d("Connection", "client succeeded");
                 //}
             } catch (Exception e) {
                 e.printStackTrace();
@@ -217,8 +219,7 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
         }
     }
 
-    public void InitializeDisplayMonitoring()
-    {
+    public void InitializeDisplayMonitoring() {
         runOnUiThread(new Runnable() {
             public void run() {
                 linLayout =
@@ -248,15 +249,20 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
         });
     }
 
-    Map<String,TextView> dictionaryProcessNameToTextView = new HashMap<String, TextView>();
-    Map<Integer, String> dictionnaryButtonToProcessName = new HashMap<Integer, String>();
+    Map<String, TextView> dictionaryProcessNameToTextView = new HashMap<String, TextView>();
+    Map<Integer, String> dictionaryButtonToProcessName = new HashMap<Integer, String>();
 
-    public void updateViewProcess(String processName, String uid,String RSS) {
+    public void updateViewProcess(String processName, String uid, String RSS) {
+        Log.d("Thread", "method called with parameters : " + processName + " " + uid + " " + RSS);
         runOnUiThread(new Runnable() {
-            public void run(){
+            public void run() {
+                Log.d("Thread", "update thread running");
                 try {
+                    Log.d("Thread", "tried");
                     TextView nameTextView = dictionaryProcessNameToTextView.get(processName);
+                    Log.d("Thread", "suceeded at reading dictionnary");
                     nameTextView.setText("[" + uid + "] " + processName + "\n" + "RSS " + RSS + "\n");
+                    Log.d("Communication", "successfully updated text view");
                 } catch (Exception e) {
                     Log.d("Connection", " Failed to update view process");
                 }
@@ -267,12 +273,12 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
 
     public void createViewProcess(String name, String uid, String RSS) {
         runOnUiThread(new Runnable() {
-            public void run(){
+            public void run() {
                 Log.d("Communication", "view process created");
 
                 RelativeLayout layout = new RelativeLayout(ClientActivity.this);
                 TextView nameTextView = new TextView(ClientActivity.this);
-                Log.d("Communication",name + uid + RSS);
+                Log.d("Communication", name + uid + RSS);
                 nameTextView.setText("[" + uid + "] " + name + "\n" + "RSS " + RSS + "\n");
                 layout.addView(nameTextView);
 
@@ -282,10 +288,9 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
                     Button button = new Button(ClientActivity.this);
                     button.setText("Monitor");
                     layout.addView(button, paramsTopRight);
-                    dictionnaryButtonToProcessName.put(button.getId(), name);
+                    dictionaryButtonToProcessName.put(button.getId(), name);
                     button.setOnClickListener(ClientActivity.this);
-                }
-                else Log.d("Communication", "no button");
+                } else Log.d("Communication", "no button");
 
 
                 try {
@@ -302,12 +307,57 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
     @Override
     public void onClick(View view) {
         Integer buttonId = view.getId();
-        communicationHandler.sendData("query|" + dictionnaryButtonToProcessName.get(buttonId));
+        //communicationHandler.sendData("query|" + dictionnaryButtonToProcessName.get(buttonId));
+        processName = dictionaryButtonToProcessName.get(buttonId);
+        //communicationHandler.sendData("query|" + processName);
+        //monitorRSS(processName);
+        if (monitorRSS == null) {
+            monitorRSS = new MonitorRSS();
+            monitorRSS.start();
+        }
     }
 
-    final Handler mHandler = new Handler() {
+    /*void monitorRSS(String processName) {
+        Thread thread = new Thread(Runnable());
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        communicationHandler.sendData("query|" + processName);
+                        Thread.sleep(5000);
+                        Log.d("update", "success");
+                    } catch (Exception e) {
+                        Log.d("thread", "thread failed");
+                    }
+                }
+            }
+        });
+    }*/
+
+    /*Handler handler = new Handler(Looper.getMainLooper() {
+        @Override
         public void handleMessage(Message msg) {
-            //
+            String processName = msg.getData().getString("packageName");
+            communicationHandler.sendData("query|" + processName);
+
+            }
+        };*/
+
+    class MonitorRSS extends Thread {
+        @Override
+        public void run() {
+            while(true) {
+                try {
+                    communicationHandler.sendData("query|" + processName);
+                    Log.d("tttt", "test class thread is      >" + Thread.currentThread().getName());
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+
+                }
+            }
         }
-    };
+    }
+
+
 }
