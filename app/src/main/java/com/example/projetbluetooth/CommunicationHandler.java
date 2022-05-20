@@ -1,16 +1,12 @@
 package com.example.projetbluetooth;
 
 import android.bluetooth.BluetoothSocket;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 public class CommunicationHandler extends Thread{
     BluetoothSocket socket;
@@ -31,8 +27,6 @@ public class CommunicationHandler extends Thread{
     public void ClientCommunication(ClientActivity clientActivity, BluetoothSocket socket) {
         this.clientActivity = clientActivity;
         this.socket = socket;
-        //connectionInitialized = false;
-        //clientActivity.InitializeDisplayMonitoring();
     }
 
     public void ServerCommunication(ServerActivity serverActivity, BluetoothSocket socket) {
@@ -80,10 +74,6 @@ public class CommunicationHandler extends Thread{
     }
 
     public void ProcessMessage(String message) {
-        /*if (!connectionInitialized && clientActivity != null) {
-            connectionInitialized = true;
-            clientActivity.InitializeDisplayMonitoring();
-        }*/
         String[] messageData = message.split("\\|");
         Log.d("Communication", messageData[0] + " message of length " + messageData.length);
         switch (messageData[0]) {
@@ -93,13 +83,17 @@ public class CommunicationHandler extends Thread{
                 clientActivity.createViewProcess(messageData[1], messageData[2], messageData[3]);
                 break;
 
+            case "buttonClick" :
+                //format : buttonClick|processName
+                serverActivity.buttonClick(messageData[1]);
+
             case "query":
                 //format : query|processName
                 serverActivity.requestMonitoring(messageData[1]);
                 break;
 
             case "update":
-                //format : update|processName|RSS
+                //format : update|processName|uid|RSS
                 Log.d("Update", "update query received");
                 clientActivity.updateViewProcess(messageData[1], messageData[2], messageData[3]);
                 break;
@@ -120,23 +114,4 @@ public class CommunicationHandler extends Thread{
         }
     }
 
-    public byte[] StringToByte(String string) {
-        return string.getBytes();
-    }
-
-    public void ByteToString(byte[] buffer) {
-        String string = buffer.toString();
-        String[] data = string.split("|");  //Split string on the | character
-        String packageName = data[0];
-        String uid = data[1];
-        String rss = data[2];
-
-        //call function in server/client with arguments String, int, int that creates a new
-        //need to check if value already exists later
-        //pas de monitor pour le client
-        //couleur pour indiquer activité monitorée
-    }
-
-    //Encodage des données : String sous la forme :
-    // [packageName]|[uid]|[rss]
 }

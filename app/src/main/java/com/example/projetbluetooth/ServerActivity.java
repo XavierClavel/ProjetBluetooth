@@ -13,6 +13,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -43,6 +46,9 @@ public class ServerActivity extends AppCompatActivity {
 
     Map<String, String> dictionaryProcessNameToUID = new HashMap<String, String>();
     Map<String, Button> dictionaryProcessNameToButton = new HashMap<String, Button>();
+    Map<String, TextView> dictionaryProcessNameToTextView = new HashMap<>();
+
+    String previousProcessName = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +61,7 @@ public class ServerActivity extends AppCompatActivity {
     void ConnectBluetooth() {
 
         UUID uuid = UUID.fromString("f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454");
+        //identifiant commun au client et au serveur qui va leur permettre de se connecter
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -103,13 +110,12 @@ public class ServerActivity extends AppCompatActivity {
                 communicationHandler = CommunicationHandler.getInstance();
                 communicationHandler.ServerCommunication(ServerActivity.this, socket);
                 communicationHandler.start();
-                Thread.sleep(1000);
+                Thread.sleep(1000); //On pause le thread pour ne pas commencer à émettre avant que le client n'écoute, sinon il ya ura perte de données
                 for (ProcessData processData : listProcess) {
-                    communicationHandler.sendData("data" + processData.FormatData());
+                    communicationHandler.sendData(processData.FormatDataForInitializing());
+                    //On envoie un message par process du serveur, qui contiendra le nom du processus, son uid et son RSS (potentiellement inconnu)
                 }
-                //Dialogue();
                 Log.d("Connection", "server succeeded");
-                //}
             } catch (Exception e) {
                 e.printStackTrace();
                 Log.d("Connection", "server failed");
@@ -136,21 +142,12 @@ public class ServerActivity extends AppCompatActivity {
     }
 
     LinearLayout linLayout;
-    RelativeLayout.LayoutParams paramsTopLeft;
     RelativeLayout.LayoutParams paramsTopRight;
 
     void DisplayMonitoring()
+    //Cette méthode a pour fonction d'afficher tous les processus du serveur
     {
         linLayout = findViewById(R.id.linLayout);
-
-        paramsTopLeft =
-                new RelativeLayout.LayoutParams(
-                        RelativeLayout.LayoutParams.WRAP_CONTENT,
-                        RelativeLayout.LayoutParams.WRAP_CONTENT);
-        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
-                RelativeLayout.TRUE);
-        paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_TOP,
-                RelativeLayout.TRUE);
 
         paramsTopRight=
                 new RelativeLayout.LayoutParams(
@@ -161,17 +158,18 @@ public class ServerActivity extends AppCompatActivity {
         paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP,
                 RelativeLayout.TRUE);
 
-        //listProcess = new List<ProcessData>();
         final Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
         final List pkgAppsList = getPackageManager().queryIntentActivities(mainIntent, 0);
+        //On récupère l'ensemble des applications installées sur le smartphone du serveur (dans la mesure des autorisations dont on dispose)
+        //Sur des versions plus récentes d'android, seules des applications systèmes ainsi que notre apk sont visibles.
 
-        //Nom des applications installées
         Log.d("Connection", pkgAppsList.toString());
-        for(Object object :pkgAppsList) {
+
+        for(Object object :pkgAppsList) { //On itère sur chaque application détectée
             Log.d("Connection", "added item");
             ResolveInfo info = (ResolveInfo) object;
-            String strPackageName = info.activityInfo.applicationInfo.packageName.toString();
+            String strPackageName = info.activityInfo.applicationInfo.packageName.toString();   //On récupère son nom et son UID
             String UID = Integer.toString(info.activityInfo.applicationInfo.uid);
             String RSS = getRSS(strPackageName);
 
@@ -182,9 +180,10 @@ public class ServerActivity extends AppCompatActivity {
     }
 
     String getRSS(String wantedPackageName)
+    //Méthode qui prend en argument un nom d'application et retourne son RSS sous forme d'un string si celui-ci est connu, ou à défaut "unknow"
     {
         int RSS = 0;
-        String RSSstring ="";
+        String RSSstring ="unknown";
         Process process = null;
         try {
             process = new ProcessBuilder("ps").start();
@@ -192,29 +191,28 @@ public class ServerActivity extends AppCompatActivity {
             return "echec";
         }
         InputStream in = process.getInputStream();
-        Scanner scanner = new Scanner(in);
-        while (scanner.hasNextLine()) {
+        Scanner scanner = new Scanner(in);  //Le scanner comporte les applications dont on peut visionner le RSS
+        while (scanner.hasNextLine()) { //On itère sur les applications détectées par le scanner
             String line = scanner.nextLine();
             if (line.startsWith("u0_")) {
                 String[] temp = line.split("\\s+");
                 String packageName = temp[temp.length - 1];
-//PID
-                if (packageName.equals(wantedPackageName)) {
+                if (packageName.equals(wantedPackageName)) {    //Si l'application dont on recherche le RSS apparait dans le scanner
                     int pid = new Integer(temp[1]).intValue();
                     Log.d("PID?", String.valueOf(pid));
-//memoire qu’occupe le processus
+                    //memoire qu’occupe le processus
                     RSS = new Integer(temp[4]).intValue();
                     Log.d("RSS?", String.valueOf(RSS));
                     RSSstring = ": " + String.valueOf(RSS);
                     return RSSstring;
                 }
-                else RSSstring = "unknown";
             }
         }
         return RSSstring;
     }
 
     void createViewProcess(String uid, String name, String monitoring)
+    // Méthode dont la fonction est d'afficher les informations d'un processus dans un RelativeLayout
     {
 
         RelativeLayout layout = new RelativeLayout(this);
@@ -222,24 +220,69 @@ public class ServerActivity extends AppCompatActivity {
         nameTextView.setText("[" + uid + "] " + name + "\n" + monitoring + "\n");
         layout.addView(nameTextView);
 
-        if (!monitoring.equals("RSS unknown")) {
+        if (!monitoring.equals("RSS unknown")) {    //On affiche le bouton de monitoring du RSS uniquement si le RSS est accessible
             Button button = new Button(this);
             button.setText("Monitor");
             layout.addView (button, paramsTopRight);
             dictionaryProcessNameToButton.put(name, button);
+            dictionaryProcessNameToTextView.put(name, nameTextView);
+            //On insère le bouton créé dans un dictionnaire avec pour clé le nom du processus
+            //Cela permettra par la suite de retrouver ce bouton et de changer sa couleur lorsque le client appuyes sur le même bouton de son côté
         }
 
         linLayout.addView(layout);
         return;
     }
 
-    public void requestMonitoring(String processName) {
+    public void buttonClick(String processName) {
+        Log.d("Communication", "here !");
+        Log.d("Communication", "previous : " + String.valueOf(previousProcessName));
+        Log.d("Communication", "current : " + String.valueOf(processName));
+
         Button button = dictionaryProcessNameToButton.get(processName);
-        button.setBackgroundColor(Color.WHITE);
-        button.setTextColor(Color.MAGENTA);
+        if (!processName.equals(previousProcessName)) {
+            Log.d("Communication", "different process");
+
+             //On modifie l'apparence du bouton en changeant sa couleur et la couleur de son texte
+            PorterDuffColorFilter greenFilter = new PorterDuffColorFilter(Color.GREEN, PorterDuff.Mode.SRC_ATOP);
+            button.getBackground().setColorFilter(greenFilter);
+
+            previousProcessName = processName;
+        }
+        else {
+            Log.d("Communication", "same process");
+
+            button.getBackground().clearColorFilter();
+            previousProcessName = null;
+        }
+    }
+
+    public void requestMonitoring(String processName) {
+    // Méthode appelée lorsque le client demande un monitoring d'une application qui retourne le RSS à l'instant ou elle est appelée
         String RSS = getRSS(processName);
-        String message = ProcessData.StringFormatDataForUpdate(processName, dictionaryProcessNameToUID.get(processName),RSS);
-        communicationHandler.sendData(message);
+        String message = ProcessData.StringFormatDataForUpdate(processName, dictionaryProcessNameToUID.get(processName), RSS);
+        communicationHandler.sendData(message); //On envoie un message au client pour lui donner la nouvelle valeur du RSS
+        updateViewProcess(processName, dictionaryProcessNameToUID.get(processName), RSS);
+
+    }
+
+    void updateViewProcess(String processName, String uid, String RSS) {
+        Log.d("Thread", "method called with parameters : " + processName + " " + uid + " " + RSS);
+        runOnUiThread(new Runnable() {
+            public void run() {
+                Log.d("Thread", "update thread running");
+                try {
+                    Log.d("Thread", "tried");
+                    TextView nameTextView = dictionaryProcessNameToTextView.get(processName);
+                    Log.d("Thread", "succeeded at reading dictionary");
+                    nameTextView.setText("[" + uid + "] " + processName + "\n" + "RSS " + RSS + "\n");
+                    Log.d("Communication", "successfully updated text view");
+                } catch (Exception e) {
+                    Log.d("Connection", " Failed to update view process");
+                }
+            }
+        });
+
     }
 
 }

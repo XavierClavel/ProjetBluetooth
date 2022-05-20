@@ -11,15 +11,13 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,13 +31,16 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
     CommunicationHandler communicationHandler;
 
     LinearLayout linLayout;
-    RelativeLayout.LayoutParams paramsTopLeft;
     RelativeLayout.LayoutParams paramsTopRight;
+
+    String previousProcessName = null;
 
     int period = 1000;
     String processName;
 
     MonitorRSS monitorRSS;
+
+    boolean shouldSendQueries = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,22 +116,9 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
                 Log.d("Connection", "Creation of RF comm socket failed");
             }
         }
-    }
-
-    void Dialogue() {
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    while (true) {
-                        Log.d("client thread", "thread running");
-                    }
-                } catch (Exception e) {
-                    Log.d("thread", "thread failed");
-                }
-            }
-        });
+        else {
+            Toast.makeText(this, "Aucun appareil compatible n'a été trouvé", Toast.LENGTH_SHORT).show();
+        }
     }
 
     class connect extends AsyncTask<String, Integer, String> {
@@ -183,18 +171,7 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
     public void InitializeDisplayMonitoring() {
         runOnUiThread(new Runnable() {
             public void run() {
-                linLayout =
-
-                        findViewById(R.id.linLayout);
-
-                paramsTopLeft =
-                        new RelativeLayout.LayoutParams(
-                                RelativeLayout.LayoutParams.WRAP_CONTENT,
-                                RelativeLayout.LayoutParams.WRAP_CONTENT);
-                paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_LEFT,
-                        RelativeLayout.TRUE);
-                paramsTopLeft.addRule(RelativeLayout.ALIGN_PARENT_TOP,
-                        RelativeLayout.TRUE);
+                linLayout = findViewById(R.id.linLayout);
 
                 paramsTopRight =
                         new RelativeLayout.LayoutParams(
@@ -221,7 +198,7 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
                 try {
                     Log.d("Thread", "tried");
                     TextView nameTextView = dictionaryProcessNameToTextView.get(processName);
-                    Log.d("Thread", "suceeded at reading dictionnary");
+                    Log.d("Thread", "succeeded at reading dictionary");
                     nameTextView.setText("[" + uid + "] " + processName + "\n" + "RSS " + RSS + "\n");
                     Log.d("Communication", "successfully updated text view");
                 } catch (Exception e) {
@@ -268,53 +245,30 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
     @Override
     public void onClick(View view) {
         Integer buttonId = view.getId();
-        //communicationHandler.sendData("query|" + dictionnaryButtonToProcessName.get(buttonId));
         processName = dictionaryButtonToProcessName.get(buttonId);
-        //communicationHandler.sendData("query|" + processName);
-        //monitorRSS(processName);
+        shouldSendQueries = previousProcessName != processName;
+        previousProcessName = processName == previousProcessName ? null : processName;
+
+        communicationHandler.sendData("buttonClick|" + processName + "||");
+
         if (monitorRSS == null) {
             monitorRSS = new MonitorRSS();
             monitorRSS.start();
         }
     }
 
-    /*void monitorRSS(String processName) {
-        Thread thread = new Thread(Runnable());
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        communicationHandler.sendData("query|" + processName);
-                        Thread.sleep(5000);
-                        Log.d("update", "success");
-                    } catch (Exception e) {
-                        Log.d("thread", "thread failed");
-                    }
-                }
-            }
-        });
-    }*/
-
-    /*Handler handler = new Handler(Looper.getMainLooper() {
-        @Override
-        public void handleMessage(Message msg) {
-            String processName = msg.getData().getString("packageName");
-            communicationHandler.sendData("query|" + processName);
-
-            }
-        };*/
-
     class MonitorRSS extends Thread {
         @Override
         public void run() {
             while(true) {
                 try {
-                    communicationHandler.sendData("query|" + processName);
-                    Log.d("tttt", "test class thread is      >" + Thread.currentThread().getName());
-                    Thread.sleep(1000);
+                    Log.d("bool value", String.valueOf(shouldSendQueries));
+                    if (shouldSendQueries) {
+                        communicationHandler.sendData("query|" + processName + "||");
+                    }
+                    Thread.sleep(1000); //attente avant d'envoyer une nouvelle requête de RSS
                 } catch (Exception e) {
-
+                    Log.d("Communication", "monitoring request failed");
                 }
             }
         }
