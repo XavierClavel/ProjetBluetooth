@@ -9,6 +9,9 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -29,18 +32,22 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
     BluetoothDevice device = null;
     Context context = this;
     CommunicationHandler communicationHandler;
+    boolean connectionEstablished = false;
 
     LinearLayout linLayout;
     RelativeLayout.LayoutParams paramsTopRight;
 
-    String previousProcessName = null;
-
-    int period = 1000;
     String processName;
 
     MonitorRSS monitorRSS;
 
+    Map<String, TextView> dictionaryProcessNameToTextView = new HashMap<String, TextView>();
+    Map<Integer, String> dictionaryButtonToProcessName = new HashMap<Integer, String>();
+
     boolean shouldSendQueries = false;
+    Button prevButton;
+
+    PorterDuffColorFilter greenFilter = new PorterDuffColorFilter(Color.GREEN, PorterDuff.Mode.SRC_ATOP);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,42 +59,20 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
 
     }
 
-    /*@Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case 1:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Log.d("Connection", "permission granted");
-                }
-                else {
-                    Toast.makeText(this, "Merci d'autoriser la connexion aux appareils bluetooth", Toast.LENGTH_SHORT).show();
-                }
-                break;
-        }
-    }*/
-
     void ConnectBluetooth() {
 
         UUID uuid = UUID.fromString("f8c3de3d-1fea-4d7c-a8b0-29f63c4c3454");
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             Log.d("Connection", "Refused");
-            //return;
         }
+
         Log.d("Connection", "Looking for devices");
         Set<BluetoothDevice> bondedDevices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
-        //TODO : case where no device is bonded => TOAST
+
         Log.d("Connection", "Got devices");
         Log.d("Connection", Integer.toString(bondedDevices.size()));
-        for (BluetoothDevice deviceIterator : bondedDevices) {
+        loop: for (BluetoothDevice deviceIterator : bondedDevices) {
             Log.d("Connection", deviceIterator.getName());
             switch (deviceIterator.getName()) {
                 case "OPPO Reno Z":
@@ -95,13 +80,15 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
                     Log.d("Connection", "Device was found !");
                     break;
 
-                case "ProjetBluetooth":
+                case "ProjetBluetooth" :
                     device = deviceIterator;
                     Log.d("Connection", "Device was found !");
-                    break;
+                    break loop;
 
-                default:
-                    Log.d("Connection", deviceIterator.getName());
+                case "Redmi Note 9":
+                    device = deviceIterator;
+                    Log.d("Connection", "Device was found !");
+                    break loop;
 
             }
         }
@@ -122,76 +109,103 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
     }
 
     class connect extends AsyncTask<String, Integer, String> {
-        // Runs in UI before background thread is called
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-
-            // Do something like display a progress bar
-        }
-
         // This is run in a background thread
         @Override
         protected String doInBackground(String... params) {
-            try {
-                Log.d("Connection", "client trying");
-                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            while (!connectionEstablished) {
+                try {
+                    Log.d("Connection", "client trying");
+                    if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        Log.d("Connection", "permission error");
+                    }
+
+                    client_socket.connect();
+
+                    Log.d("Connection", "client succeeded");
+                    connectionEstablished = true;
+
+                    //}
+                } catch (Exception e) {
+                    Log.d("Connection", "client failed");
+                    try {
+                        Thread.sleep(500);
+                    } catch (Exception f){
+                        Log.d("Connection", "Failed to sleep");
+                    }
+
                 }
-                client_socket.connect();
-                communicationHandler = CommunicationHandler.getInstance();
-                communicationHandler.ClientCommunication(ClientActivity.this, client_socket);
-                communicationHandler.start();
-                Log.d("Connection", "client succeeded");
-                //}
-            } catch (Exception e) {
-                e.printStackTrace();
-                Log.d("Connection", "client failed");
+
             }
-
-            return "this string is passed to onPostExecute";
-        }
-
-        // This is called from background thread but runs in UI
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-
-            // Do things like update the progress bar
-        }
-
-        // This runs in UI when background thread finishes
-        @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
-
-            // Do things like hide the progress bar or change a TextView
+            communicationHandler = new CommunicationHandler();
+            communicationHandler.ClientCommunication(ClientActivity.this, client_socket);
+            communicationHandler.start();
+            return "Done";
         }
     }
 
     public void InitializeDisplayMonitoring() {
-        runOnUiThread(new Runnable() {
+        runOnUiThread(new Runnable() {  //Un runOnUIThread est ici utilisé à la place d'un thread handler
             public void run() {
                 linLayout = findViewById(R.id.linLayout);
 
-                paramsTopRight =
-                        new RelativeLayout.LayoutParams(
-                                RelativeLayout.LayoutParams.WRAP_CONTENT,
-                                RelativeLayout.LayoutParams.WRAP_CONTENT);
-                paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_RIGHT,
-                        RelativeLayout.TRUE);
-                paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP,
-                        RelativeLayout.TRUE);
+                paramsTopRight = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+                paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+                paramsTopRight.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                //Paramètres utilisés pour placer le bouton dans le relative layout
 
                 Log.d("Communication", "view initialized");
             }
         });
     }
 
-    Map<String, TextView> dictionaryProcessNameToTextView = new HashMap<String, TextView>();
-    Map<Integer, String> dictionaryButtonToProcessName = new HashMap<Integer, String>();
+    public void createViewProcess(String name, String uid, String RSS) {
+        //Méthode appelée à la réception d'un message ayant pour premier paramètre "data"
+        // Elle a pour fonction d'afficher les informations envoyées par le serveur sur une application : nom, uid et RSS.
+        runOnUiThread(new Runnable() {
+            public void run() {
+                Log.d("Communication", "view process created");
+
+                RelativeLayout layout = new RelativeLayout(ClientActivity.this);
+                TextView nameTextView = new TextView(ClientActivity.this);
+                Log.d("Communication", name + uid + RSS);
+                nameTextView.setText("[" + uid + "] " + name + "\n" + "RSS " + RSS + "\n");     //affichage des informations
+                layout.addView(nameTextView);
+
+                Log.d("RSS", "\"" + RSS + "\"");
+
+                if (!RSS.equals("unknown")) {       //On affiche un bouton uniquement si le serveur a accès au RSS du processus
+                    Button button = new Button(ClientActivity.this);
+                    button.setText("Monitor");
+                    layout.addView(button, paramsTopRight);
+
+                    dictionaryButtonToProcessName.put(button.getId(), name);
+                    //On place le nom du processus dans un dictionnaire avec comme clé l'identifiant du bouton.
+                    //Cela nous permettra lors de l'appui sur le bouton de savoir à quel processus il est lié.
+
+                    button.setOnClickListener(ClientActivity.this);     //on active l'écoute sur le bouton
+
+                } else Log.d("Communication", "no button");
+
+                try {
+                    linLayout.addView(layout);  //ajouter les relative layouts au linear layout permet d'obtenir l'affichage désiré, avec des blocs qui se succèdent verticalement
+                    Log.d("Communication", "success");
+
+                    dictionaryProcessNameToTextView.put(name, nameTextView);
+                    //on place le textView dans un dictionnaire avec comme clé le nom du processus pour pouvoir récupérer une référence au textView plus tard,
+                    // ce qui sera nécessaire pour mettre à jour le RSS
+
+                } catch (Exception e) {
+                    Log.d("Communication", "failed to add view");
+                }
+            }
+        });
+    }
 
     public void updateViewProcess(String processName, String uid, String RSS) {
+        //Méthode appelée à la réception d'un message ayant pour premier paramètre "update"
+        // Elle a pour fonction de mettre à jour les informations affichées par le client sur une application monitorée
         Log.d("Thread", "method called with parameters : " + processName + " " + uid + " " + RSS);
+
         runOnUiThread(new Runnable() {
             public void run() {
                 Log.d("Thread", "update thread running");
@@ -209,62 +223,46 @@ public class ClientActivity extends AppCompatActivity implements  View.OnClickLi
 
     }
 
-    public void createViewProcess(String name, String uid, String RSS) {
-        runOnUiThread(new Runnable() {
-            public void run() {
-                Log.d("Communication", "view process created");
-
-                RelativeLayout layout = new RelativeLayout(ClientActivity.this);
-                TextView nameTextView = new TextView(ClientActivity.this);
-                Log.d("Communication", name + uid + RSS);
-                nameTextView.setText("[" + uid + "] " + name + "\n" + "RSS " + RSS + "\n");
-                layout.addView(nameTextView);
-
-                Log.d("RSS", "\"" + RSS + "\"");
-
-                if (!RSS.equals("unknown")) {
-                    Button button = new Button(ClientActivity.this);
-                    button.setText("Monitor");
-                    layout.addView(button, paramsTopRight);
-                    dictionaryButtonToProcessName.put(button.getId(), name);
-                    button.setOnClickListener(ClientActivity.this);
-                } else Log.d("Communication", "no button");
-
-
-                try {
-                    linLayout.addView(layout);
-                    Log.d("Communication", "success");
-                    dictionaryProcessNameToTextView.put(name, nameTextView);
-                } catch (Exception e) {
-                    Log.d("Communication", "failed to add view");
-                }
-            }
-        });
-    }
-
     @Override
     public void onClick(View view) {
         Integer buttonId = view.getId();
-        processName = dictionaryButtonToProcessName.get(buttonId);
-        shouldSendQueries = previousProcessName != processName;
-        previousProcessName = processName == previousProcessName ? null : processName;
+        processName = dictionaryButtonToProcessName.get(buttonId);  //On récupère le nom du processus associé au bouton grâce à un dictionnaire
+        //La variable globale processName est ensuite utilisée pour l'envoi des requêtes de RSS et d'indiaction d'appui sur un bouton, pour indiquer le processus cible
 
-        communicationHandler.sendData("buttonClick|" + processName + "||");
+        Button button = (Button) view;
+        shouldSendQueries = button != prevButton; //variable indiquant si un monitoring est en cours
+
+        if (prevButton == button) { //correspond au cas où on appuye sur le bouton d'un processus en cours de monitoring
+            button.getBackground().clearColorFilter();  //On retire la coloration du bouton
+            prevButton = null;      //On réinitialise la valeur de prevButton pour permettre de monitorer de nouveau le processus
+        }
+        else {
+            button.getBackground().setColorFilter(greenFilter); //Coloration du bouton du processus pour lequel on demande un monitoring
+            if (prevButton != null) {
+                prevButton.getBackground().clearColorFilter();      //On retire la coloration de l'ancien bouton (on n'autorise qu'un seul monitoring simultané)
+            }
+            prevButton = button;
+        }
+
+        communicationHandler.sendData(ProcessData.MessageButtonClick(processName));
 
         if (monitorRSS == null) {
             monitorRSS = new MonitorRSS();
             monitorRSS.start();
+            //Le thread est lancé une seule fois, puis tourne en continu.
         }
     }
 
     class MonitorRSS extends Thread {
+    //Ce thread a pour fonction d'effectuer une requête de RSS à chaque seconde.
+    //Il n'est jamais stoppé une fois lancé, mais n'envoie de requête que si un processus est monitoré.
         @Override
         public void run() {
             while(true) {
                 try {
                     Log.d("bool value", String.valueOf(shouldSendQueries));
                     if (shouldSendQueries) {
-                        communicationHandler.sendData("query|" + processName + "||");
+                        communicationHandler.sendData(ProcessData.MessageQuery(processName));
                     }
                     Thread.sleep(1000); //attente avant d'envoyer une nouvelle requête de RSS
                 } catch (Exception e) {

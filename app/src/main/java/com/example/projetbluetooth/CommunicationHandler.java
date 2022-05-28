@@ -17,12 +17,10 @@ public class CommunicationHandler extends Thread{
     ClientActivity clientActivity;
     ServerActivity serverActivity;
 
-    // Singleton pattern
-    static CommunicationHandler instance = new CommunicationHandler();
-
-    public static CommunicationHandler getInstance() {
-        return instance;
-    }
+    //Cette classe est utilisée par le client et par le serveur pour envoyer et lire des messages.
+    //Le client et le serveur vont chacun appeler l'une des deux méthodes suivantes pour donner à l'instance de cette classe qu'ils utilisent les références nécéssaires :
+    //1) au socket, pour pouvoir envoyer et lire des messages.
+    //2) à la classe du client ou du serveur, pour pouvoir appeler la méthode adaptée à la réception d'un message.
 
     public void ClientCommunication(ClientActivity clientActivity, BluetoothSocket socket) {
         this.clientActivity = clientActivity;
@@ -36,7 +34,7 @@ public class CommunicationHandler extends Thread{
 
     @Override
     public void run() {
-        byte[] buffer = new byte[256];
+        byte[] buffer = new byte[256];      //array de bytes dans lequel on va stocker les messages reçus
         Log.d("Communication", "thread is running");
 
         try {
@@ -45,6 +43,7 @@ public class CommunicationHandler extends Thread{
 
             dataIn = new DataInputStream(in);
             dataOut = new DataOutputStream(out);
+            //récupération de références aux flux de données entrants et sortants du socket
 
             Log.d("Communication", "initialization ok");
 
@@ -60,13 +59,16 @@ public class CommunicationHandler extends Thread{
     public void read(byte[] buffer) {
         int bytes;
         try {
-            bytes = dataIn.read(buffer);
-            String messageReceived = new String(buffer, 0, bytes);
+            bytes = dataIn.read(buffer);        //lecture du message sous forme d'array de bytes
+            String messageReceived = new String(buffer, 0, bytes);  //conversion array de bytes -> string
             Log.d("Communication", messageReceived);
-            String[] messages = messageReceived.split("\\|\\|");
-            for (String message : messages) {
+
+            String[] messages = messageReceived.split("\\|\\|");    //Le caractère  "|" est un caractère spécial, d'où l'utilisation de backslash
+            //Nous avons choisi ce caractère pour améliorer la lisibilité des messages tout en évitant d'utiliser un caractère pouvant être présent dans le nom du processus
+
+            for (String message : messages) {   //Permet de traiter séparément plusieurs messages s'ils sont arrivés dans le même string
                 Log.d("Communication", "message read : " + message);
-                ProcessMessage(message);
+                ProcessMessage(message);    //Traitement du message
             }
         } catch (Exception e) {
             Log.d("Communication", "failed to read");
@@ -74,12 +76,12 @@ public class CommunicationHandler extends Thread{
     }
 
     public void ProcessMessage(String message) {
-        String[] messageData = message.split("\\|");
+        String[] messageData = message.split("\\|");    //séparation des composantes du message
         Log.d("Communication", messageData[0] + " message of length " + messageData.length);
-        switch (messageData[0]) {
+
+        switch (messageData[0]) {   //permet d'identifier le type de message
             case "data":
                 // format : data|processName|uid|RSS
-                Log.d("Communication", "data received");
                 clientActivity.createViewProcess(messageData[1], messageData[2], messageData[3]);
                 break;
 
@@ -94,7 +96,6 @@ public class CommunicationHandler extends Thread{
 
             case "update":
                 //format : update|processName|uid|RSS
-                Log.d("Update", "update query received");
                 clientActivity.updateViewProcess(messageData[1], messageData[2], messageData[3]);
                 break;
 
@@ -102,13 +103,13 @@ public class CommunicationHandler extends Thread{
     }
 
     public void sendData(String message) {
-        write(message.getBytes());
+        write(message.getBytes());      //conversion string -> array de bytes
     }
 
     public void write(byte[] buffer) {
         try {
-            dataOut.write(buffer);
-            dataOut.flush();
+            dataOut.write(buffer);      //écriture des données
+            dataOut.flush();            //envoi des données
         } catch (Exception e) {
             Log.d("thread", "failed to write");
         }
